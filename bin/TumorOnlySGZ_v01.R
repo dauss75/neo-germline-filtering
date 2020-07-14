@@ -1,5 +1,3 @@
-# Simple helper script that benchmarks predictSomatic using a tumor/normal VCF
-
 suppressPackageStartupMessages(library(optparse))
 suppressPackageStartupMessages(library(futile.logger))
 suppressPackageStartupMessages(library(pROC))
@@ -42,11 +40,10 @@ if (is.null(infileRds)) stop("Need --rds")
 infileRds <- normalizePath(infileRds, mustWork=TRUE)
 
 # sgz directory
-sgzdir<-'/isilon/RnD/tools/sgz'
+sgzdir<-opt$sgzdir
 
 # Parse both BED files restricting covered region
-#callableFile <- opt$callable
-callableFile <-'/isilon/RnD/tools/custom_script/purecn/bed/QIAseq323.CDHS-24104Z-14204.refseq-anno.roi.exons.nolowcovrois_genes_only.bed'
+callableFile <- opt$callable
 callable <- NULL
 if (!is.null(callableFile)) {
     suppressPackageStartupMessages(library(rtracklayer))
@@ -56,9 +53,6 @@ if (!is.null(callableFile)) {
 }
 
 ### Run PureCN ----------------------------------------------------------------
-
-#flog.info("Loading PureCN...")
-#suppressPackageStartupMessages(library(PureCN))
 
 res <- readCurationFile(infileRds)
 sampleid <- res$input$sampleid
@@ -80,13 +74,6 @@ sampleid <- res$input$sampleid
     outPrefix <- file.path(outdir, prefix)
 }
 outPrefix <- .getOutPrefix(opt, infileRds, sampleid)
-
-# outfile <- paste0(outPrefix, "_sgz.tumor_only_benchmark.csv")
-# 
-# 
-# if (!opt$force && file.exists(outfile)) {
-#     stop(outfile, " exists. Use --force to overwrite.")
-# }
 
 flog.info("Reading %s...", basename(opt$vcf))
 vcf <- PureCN:::.readAndCheckVcf(opt$vcf, genome = genome(res$input$vcf)[1])
@@ -124,46 +111,67 @@ pos<-as.vector(start(vcf))
 AF<-as.vector(info(vcf)$AF)
 DP<-as.vector(info(vcf)$DP)
 ANN<-as.vector(info(vcf)$ANN)
+
 for (i in 1:length(vcf)){
   if (startsWith(unlist(strsplit(ANN[[i]],"[|]"))[2], "missense")){
-    df[i,1]<-sampleid
-    df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
-    df[i,3]<-AF[[i]]
-    df[i,4]<-DP[[i]]
-    df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
-    df[i,6]<-"unknown"
-    df[i,7]<-"*"
-    df[i,8]<-"missense"
+     mutation<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
+     frequency<-AF[[i]]
+     depth<-DP[[i]]
+     position<-paste(chr[[i]],pos[[i]],sep=":")
+     df[i,1:8]<-c(sampleid,mutation,frequency,depth,position,'unknown','*','missense')
+    # df[i,1]<-sampleid
+    # df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
+    # df[i,3]<-AF[[i]]
+    # df[i,4]<-DP[[i]]
+    # df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
+    # df[i,6]<-"unknown"
+    # df[i,7]<-"*"
+    # df[i,8]<-"missense"
   }
   if (startsWith(unlist(strsplit(ANN[[i]],"[|]"))[2], "frameshift")){
-    df[i,1]<-sampleid
-    df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
-    df[i,3]<-info(vcf)$AF[[i]]
-    df[i,4]<-info(vcf)$DP[[i]]
-    df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
-    df[i,6]<-"unknown"
-    df[i,7]<-"*"
-    df[i,8]<-"frameshift"
+    mutation<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
+    frequency<-AF[[i]]
+    depth<-DP[[i]]
+    position<-paste(chr[[i]],pos[[i]],sep=":")
+    df[i,1:8]<-c(sampleid,mutation,frequency,depth,position,'unknown','*','frameshift')
+    # df[i,1]<-sampleid
+    # df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
+    # df[i,3]<-info(vcf)$AF[[i]]
+    # df[i,4]<-info(vcf)$DP[[i]]
+    # df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
+    # df[i,6]<-"unknown"
+    # df[i,7]<-"*"
+    # df[i,8]<-"frameshift"
   }
   if (startsWith(unlist(strsplit(ANN[[i]],"[|]"))[2], "nonsense")){
-    df[i,1]<-sampleid
-    df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
-    df[i,3]<-info(vcf)$AF[[i]]
-    df[i,4]<-info(vcf)$DP[[i]]
-    df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
-    df[i,6]<-"unknown"
-    df[i,7]<-"*"
-    df[i,8]<-"nonsense"
+    mutation<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
+    frequency<-AF[[i]]
+    depth<-DP[[i]]
+    position<-paste(chr[[i]],pos[[i]],sep=":")
+    df[i,1:8]<-c(sampleid,mutation,frequency,depth,position,'unknown','*','nonsense')
+    # df[i,1]<-sampleid
+    # df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
+    # df[i,3]<-info(vcf)$AF[[i]]
+    # df[i,4]<-info(vcf)$DP[[i]]
+    # df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
+    # df[i,6]<-"unknown"
+    # df[i,7]<-"*"
+    # df[i,8]<-"nonsense"
   }
   if (startsWith(unlist(strsplit(ANN[[i]],"[|]"))[2], "synonymous")){
-    df[i,1]<-sampleid
-    df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
-    df[i,3]<-info(vcf)$AF[[i]]
-    df[i,4]<-info(vcf)$DP[[i]]
-    df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
-    df[i,6]<-"unknown"
-    df[i,7]<-"*"
-    df[i,8]<-"synonymous"
+    mutation<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
+    frequency<-AF[[i]]
+    depth<-DP[[i]]
+    position<-paste(chr[[i]],pos[[i]],sep=":")
+    df[i,1:8]<-c(sampleid,mutation,frequency,depth,position,'unknown','*','synonymous')
+    # df[i,1]<-sampleid
+    # df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
+    # df[i,3]<-info(vcf)$AF[[i]]
+    # df[i,4]<-info(vcf)$DP[[i]]
+    # df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
+    # df[i,6]<-"unknown"
+    # df[i,7]<-"*"
+    # df[i,8]<-"synonymous"
   }
 }
 

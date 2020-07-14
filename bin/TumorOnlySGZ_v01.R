@@ -96,13 +96,6 @@ sgz_cna <- sgz_cna[which(sgz_cna$numAFProbes>=1),]
 
 flog.info("Classifying germline vs. somatic...")
 
-# p <- GRanges(predictSomatic(res))
-
-# if (!is.null(callable)) {
-#     p <- p[overlapsAny(p, callable)]
-#     vcf <- vcf[overlapsAny(vcf, callable)]
-# }
-
 df <- data.frame(matrix(ncol = 8, nrow = 0))
 colnames(df)<-c("#sample","mutation","frequency","depth","pos","status","strand","effect")
 
@@ -119,14 +112,6 @@ for (i in 1:length(vcf)){
      depth<-DP[[i]]
      position<-paste(chr[[i]],pos[[i]],sep=":")
      df[i,1:8]<-c(sampleid,mutation,frequency,depth,position,'unknown','*','missense')
-    # df[i,1]<-sampleid
-    # df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
-    # df[i,3]<-AF[[i]]
-    # df[i,4]<-DP[[i]]
-    # df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
-    # df[i,6]<-"unknown"
-    # df[i,7]<-"*"
-    # df[i,8]<-"missense"
   }
   if (startsWith(unlist(strsplit(ANN[[i]],"[|]"))[2], "frameshift")){
     mutation<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
@@ -134,14 +119,6 @@ for (i in 1:length(vcf)){
     depth<-DP[[i]]
     position<-paste(chr[[i]],pos[[i]],sep=":")
     df[i,1:8]<-c(sampleid,mutation,frequency,depth,position,'unknown','*','frameshift')
-    # df[i,1]<-sampleid
-    # df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
-    # df[i,3]<-info(vcf)$AF[[i]]
-    # df[i,4]<-info(vcf)$DP[[i]]
-    # df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
-    # df[i,6]<-"unknown"
-    # df[i,7]<-"*"
-    # df[i,8]<-"frameshift"
   }
   if (startsWith(unlist(strsplit(ANN[[i]],"[|]"))[2], "nonsense")){
     mutation<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
@@ -149,14 +126,6 @@ for (i in 1:length(vcf)){
     depth<-DP[[i]]
     position<-paste(chr[[i]],pos[[i]],sep=":")
     df[i,1:8]<-c(sampleid,mutation,frequency,depth,position,'unknown','*','nonsense')
-    # df[i,1]<-sampleid
-    # df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
-    # df[i,3]<-info(vcf)$AF[[i]]
-    # df[i,4]<-info(vcf)$DP[[i]]
-    # df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
-    # df[i,6]<-"unknown"
-    # df[i,7]<-"*"
-    # df[i,8]<-"nonsense"
   }
   if (startsWith(unlist(strsplit(ANN[[i]],"[|]"))[2], "synonymous")){
     mutation<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
@@ -164,14 +133,6 @@ for (i in 1:length(vcf)){
     depth<-DP[[i]]
     position<-paste(chr[[i]],pos[[i]],sep=":")
     df[i,1:8]<-c(sampleid,mutation,frequency,depth,position,'unknown','*','synonymous')
-    # df[i,1]<-sampleid
-    # df[i,2]<-paste(unlist(strsplit(ANN[[i]],"[|]"))[4],':',unlist(strsplit(ANN[[i]],"[|]"))[7],':',paste(unlist(strsplit(ANN[[i]],"[|]"))[10:11],collapse="_"),sep="")
-    # df[i,3]<-info(vcf)$AF[[i]]
-    # df[i,4]<-info(vcf)$DP[[i]]
-    # df[i,5]<-paste(chr[[i]],pos[[i]],sep=":")
-    # df[i,6]<-"unknown"
-    # df[i,7]<-"*"
-    # df[i,8]<-"synonymous"
   }
 }
 

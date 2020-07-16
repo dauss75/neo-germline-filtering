@@ -3,16 +3,20 @@
 
 import os
 import os.path
-import subprocess
-import argparse
 from os import listdir
 from os.path import isfile, join
+import subprocess
+import argparse
 from joblib import Parallel, delayed
 import pyranges as pr   # header needs to match as Chromosome Start End
 import pandas as pd
 import glob
 
-NCPU = 20
+__author__ = 'Segun C. Jung'
+__contact__ = 'segun.jung@neogenomics.com'
+__version__ = '1.0.0'
+__doc__ = '''PureCN wrapper to run in parallel to evaluate germline/somatic mutations and CNA.'''
+
 
 def parallel_run(output_dir, sn, rscript, purecn_exe, bam_files_dir, sn_bam_dict, intervals_output_file):
     """
@@ -25,7 +29,7 @@ def parallel_run(output_dir, sn, rscript, purecn_exe, bam_files_dir, sn_bam_dict
     """
     coverage_command = [rscript, purecn_exe + '/Coverage.R',
                        '--force',
-                       '--keepduplicates',
+                       '--keepduplicates',      #if no UMI used, then comment out
                        '--outdir', output_dir + '/' + sn,
                        '--bam', '/'.join([bam_files_dir, sn_bam_dict[sn]]),
                        '--intervals', intervals_output_file]
@@ -64,6 +68,7 @@ def parallel_run_pureCN_SGZ(output_dir, sn, rscript, purecn_exe, sgz_dir, input_
                        '--vcf', tumorvcf,
                        '--sgzdir', sgz_dir,
                        '--callable', input_bed_file]
+    print("sgz_cmd: " + " ".join(sgz_command))
     out, error = subprocess.Popen(" ".join(sgz_command), stdout=subprocess.PIPE, shell=True).communicate()
     if error:
         print("An error occured: {error}".format(error=error))
@@ -137,6 +142,12 @@ def __main__():
 
             tumor_coverage_list.append(args.output_dir + '/' + sn + '/' + sn + '_coverage_loess.txt.gz')
 
+        # determine the number of CPUs
+        if len(tumorbamfiles) > 20:
+            NCPU = 20
+        else:
+            NCPU=int(len(tumorbamfiles))
+
         Parallel(n_jobs=NCPU)(delayed(parallel_run)(output_dir=args.output_dir, \
                               sn=tumor_sample_list[i], rscript=rscript, purecn_exe=purecn_exe, bam_files_dir=args.tumor_bam_dir, \
                               sn_bam_dict=tumor_sn_bam_dict, intervals_output_file=intervals_output_file) for i in range(0,len(tumor_sample_list)))
@@ -183,6 +194,7 @@ def __main__():
         normaldb_file = args.output_dir + '/' + 'normalDB_hg19.rds'
         mapping_bias =  args.output_dir + '/' + 'mapping_bias_hg19.rds'
     else:
+        #recycle files
         normaldb_file = '/isilon/RnD/tools/custom_script/purecn/mapping_bias/qiaseq323/pon_min1_qiaseq323_14normals_normalDB_hg19.rds'
         mapping_bias =  '/isilon/RnD/tools/custom_script/purecn/mapping_bias/qiaseq323/pon_min1_qiaseq323_14normals_mapping_bias_hg19.rds'
 
@@ -206,7 +218,7 @@ def __main__():
         print('--------------------------------\n| ** generate a final report for PureCN ** |\n--------------------------------\n')
 
         fields1 = ['Sampleid','chr', 'start','end','arm','C','M','type','seg.mean','M.flagged']
-        fields2 = ['Sampleid','chr', 'start','end','ID','REF','ALT','ML.SOMATIC','POSTERIOR.SOMATIC','ML.LOH','log.ratio','depth','gene.symbol']
+        fields2 = ['Sampleid','chr', 'start','end','ID','REF','ALT','ML.SOMATIC','POSTERIOR.SOMATIC','ML.LOH','log.ratio','depth','prior.somatic','gene.symbol']
         outputF = '{out}/{out}_purecn_final_report.xlsx'.format(out=args.output_dir)
         x = []
 
@@ -225,13 +237,11 @@ def __main__():
                     if df1.shape[0]!=0:
                         df1 = df1[(df1['C']!=2) | (df1['M']==0)]  # exclude CN=2 and yet keep whoe neutral arm
                         df1.sort_values(by=['chr'])
-
-                        # print(df1)
+                        #df2 = df2[(df2['prior.somatic']>0.1)]   # dbsnp includes some somatic so hold off applying now
                         x.append(df1)
                         if flag==0:
                             df1.to_excel(writer,sheet_name='master',index=False)
                             flag=flag+1
-                        #df1.to_excel(writer, sheet_name=sn1,index=False)
 
                         # create PyRanges-objects from the dfs
                         # pr requires a certain format with column names Chromosome Start End
